@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/google/go-querystring/query"
 )
 
 const base = "https://api.thecatapi.com/v1"
@@ -23,6 +25,9 @@ func NewClient(apiKey string) *Client {
 
 //create request
 func (c *Client) makeRequest(endpoint string, method string) (*http.Request, error) {
+
+	//Debug endpoint
+	//fmt.Println(endpoint)
 
 	url := base + endpoint
 	req, err := http.NewRequest(method, url, nil)
@@ -44,6 +49,7 @@ func (c *Client) runRequest(req *http.Request, results interface{}) error {
 
 	defer response.Body.Close()
 
+	//Debug json
 	//body, err := ioutil.ReadAll(response.Body)
 	//fmt.Println(string(body))
 
@@ -56,10 +62,26 @@ func (c *Client) runRequest(req *http.Request, results interface{}) error {
 	return nil
 }
 
-//Fetching cat images
-func (c *Client) GetImageSearch() (*ImageResults, error) {
+type ImageSearchOptions struct {
+	Size      string `url:"size"`
+	MimeTypes string `url:"mime_types"`
+	Order     string `url:"order"`
+	Page      int    `url:"page"`
+	Limit     int    `url:"limit"`
+}
 
-	req, err := c.makeRequest("/images/search", http.MethodGet)
+//Fetching cat images
+func (c *Client) GetImageSearch(options ImageSearchOptions) (*ImageResults, error) {
+
+	//Default settings for GET parameters
+	if options == (ImageSearchOptions{}) {
+		options = ImageSearchOptions{"med", "jpg,gif,png", "RANDOM", 1, 1}
+	}
+
+	//GET params
+	params, _ := query.Values(options)
+
+	req, err := c.makeRequest("/images/search?"+params.Encode(), http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
@@ -74,13 +96,49 @@ func (c *Client) GetImageSearch() (*ImageResults, error) {
 	return v, nil
 }
 
+//Fetching categories
+func (c *Client) GetCategories() (*CategoryResults, error) {
+
+	req, err := c.makeRequest("/categories", http.MethodGet)
+	if err != nil {
+		return nil, err
+	}
+
+	v := &CategoryResults{}
+
+	err = c.runRequest(req, v)
+	if err != nil {
+		return nil, err
+	}
+
+	return v, nil
+}
+
 func main() {
 	c := NewClient("7a1768b0-1600-4c55-9769-83721284ab92")
-	images, err := c.GetImageSearch()
+
+	//*
+	options := ImageSearchOptions{}
+	options.Limit = 5
+	options.Order = "ASC"
+	options.Page = 0
+
+	images, err := c.GetImageSearch(options)
 	if err != nil {
 		fmt.Println("badjuju")
 	}
 	fmt.Println(images)
+	/*/
+	categories, err := c.GetCategories()
+	if err != nil {
+		fmt.Println("badjuju")
+	}
+	fmt.Println(categories)*/
+}
+
+type CategoryResults []struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type ImageResults []struct {
@@ -129,15 +187,3 @@ type ImageResults []struct {
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 }
-
-/*
-type GetImagesOptions struct {
-  Query   string `url:"q"`
-  ShowAll bool   `url:"all"`
-  Page    int    `url:"page"`
-}
-opt := GetImagesOptions{ "foo", true, 2 }
-v, _ := query.Values(opt)
-fmt.Print(v.Encode()) // will output: "q=foo&all=true&page=2"
-
-*/

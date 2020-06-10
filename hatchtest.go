@@ -1,4 +1,4 @@
-package hatchtest
+package main
 
 import (
 	"encoding/json"
@@ -15,6 +15,7 @@ type Client struct {
 
 func NewClient(apiKey string) *Client {
 	c := &Client{}
+	c.httpClient = http.DefaultClient
 	c.apiKey = apiKey
 
 	return c
@@ -24,8 +25,10 @@ func NewClient(apiKey string) *Client {
 func (c *Client) makeRequest(endpoint string, method string) (*http.Request, error) {
 
 	url := base + endpoint
-
-	req, err := c.httpClient.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
 
@@ -33,7 +36,7 @@ func (c *Client) makeRequest(endpoint string, method string) (*http.Request, err
 }
 
 //running the request
-func (c *Client) runRequest(req *http.Request, v interface{}) (*http.Response, error) {
+func (c *Client) runRequest(req *http.Request, v interface{}) (ImageResult, error) {
 	response, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -41,20 +44,31 @@ func (c *Client) runRequest(req *http.Request, v interface{}) (*http.Response, e
 
 	defer response.Body.Close()
 
-	err = json.NewDecoder(response.Body).Decode(v)
+	//body, err := ioutil.ReadAll(response.Body)
+	//fmt.Println(string(body))
 
-	return response, err
+	var results ImageResult
+
+	err = json.NewDecoder(response.Body).Decode(&results)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return results, nil
 }
 
 //Fetching cat images
-func (c *Client) GetImageSearch( /*, opts *GetImagesOptions*/ ) {
+func (c *Client) GetImageSearch() (ImageResult, error) {
 
-	req, err := makeRequest("/images/search", http.MethodGet)
+	req, err := c.makeRequest("/images/search", http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := runRequest(req)
+	//var v ImageResult
+	var v interface{}
+
+	response, err := c.runRequest(req, v)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +77,59 @@ func (c *Client) GetImageSearch( /*, opts *GetImagesOptions*/ ) {
 }
 
 func main() {
-	client := NewClient("7a1768b0-1600-4c55-9769-83721284ab92")
-	images, _ := client.GetImageSearch()
-	fmt.Println(images)
+	c := NewClient("7a1768b0-1600-4c55-9769-83721284ab92")
+	images, err := c.GetImageSearch()
+	if err != nil {
+		fmt.Println("badjuju")
+	}
+	fmt.Println(images[0].URL)
+}
+
+type ImageResult []struct {
+	Breeds []struct {
+		Weight struct {
+			Imperial string `json:"imperial"`
+			Metric   string `json:"metric"`
+		} `json:"weight"`
+		ID               string `json:"id"`
+		Name             string `json:"name"`
+		CfaURL           string `json:"cfa_url"`
+		VetstreetURL     string `json:"vetstreet_url"`
+		VcahospitalsURL  string `json:"vcahospitals_url"`
+		Temperament      string `json:"temperament"`
+		Origin           string `json:"origin"`
+		CountryCodes     string `json:"country_codes"`
+		CountryCode      string `json:"country_code"`
+		Description      string `json:"description"`
+		LifeSpan         string `json:"life_span"`
+		Indoor           int    `json:"indoor"`
+		AltNames         string `json:"alt_names"`
+		Adaptability     int    `json:"adaptability"`
+		AffectionLevel   int    `json:"affection_level"`
+		ChildFriendly    int    `json:"child_friendly"`
+		DogFriendly      int    `json:"dog_friendly"`
+		EnergyLevel      int    `json:"energy_level"`
+		Grooming         int    `json:"grooming"`
+		HealthIssues     int    `json:"health_issues"`
+		Intelligence     int    `json:"intelligence"`
+		SheddingLevel    int    `json:"shedding_level"`
+		SocialNeeds      int    `json:"social_needs"`
+		StrangerFriendly int    `json:"stranger_friendly"`
+		Vocalisation     int    `json:"vocalisation"`
+		Experimental     int    `json:"experimental"`
+		Hairless         int    `json:"hairless"`
+		Natural          int    `json:"natural"`
+		Rare             int    `json:"rare"`
+		Rex              int    `json:"rex"`
+		SuppressedTail   int    `json:"suppressed_tail"`
+		ShortLegs        int    `json:"short_legs"`
+		WikipediaURL     string `json:"wikipedia_url"`
+		Hypoallergenic   int    `json:"hypoallergenic"`
+	} `json:"breeds"`
+	ID     string `json:"id"`
+	URL    string `json:"url"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
 }
 
 /*

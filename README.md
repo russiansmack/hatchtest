@@ -4,4 +4,4 @@
 
 Result: Sadly the The Cat API was broken in multiple ways, and I could only reliably get couple of GETs.. which really made this barely enough to qualify.
 
-The actual API wrapper is under (github.com/russiansmack/thecatapiwrapper)[github.com/russiansmack/thecatapiwrapper]
+The actual API wrapper is under (https://github.com/russiansmack/thecatapiwrapper)[https://github.com/russiansmack/thecatapiwrapper]

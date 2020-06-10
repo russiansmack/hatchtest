@@ -15,7 +15,7 @@ type Client struct {
 
 func NewClient(apiKey string) *Client {
 	c := &Client{}
-	c.httpClient = http.DefaultClient
+	c.httpClient = &http.Client{}
 	c.apiKey = apiKey
 
 	return c
@@ -36,10 +36,10 @@ func (c *Client) makeRequest(endpoint string, method string) (*http.Request, err
 }
 
 //running the request
-func (c *Client) runRequest(req *http.Request, v interface{}) (ImageResult, error) {
+func (c *Client) runRequest(req *http.Request, results interface{}) error {
 	response, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer response.Body.Close()
@@ -47,33 +47,31 @@ func (c *Client) runRequest(req *http.Request, v interface{}) (ImageResult, erro
 	//body, err := ioutil.ReadAll(response.Body)
 	//fmt.Println(string(body))
 
-	var results ImageResult
-
-	err = json.NewDecoder(response.Body).Decode(&results)
+	err = json.NewDecoder(response.Body).Decode(results)
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 
-	return results, nil
+	return nil
 }
 
 //Fetching cat images
-func (c *Client) GetImageSearch() (ImageResult, error) {
+func (c *Client) GetImageSearch() (*ImageResults, error) {
 
 	req, err := c.makeRequest("/images/search", http.MethodGet)
 	if err != nil {
 		return nil, err
 	}
 
-	//var v ImageResult
-	var v interface{}
+	v := &ImageResults{}
 
-	response, err := c.runRequest(req, v)
+	err = c.runRequest(req, v)
 	if err != nil {
 		return nil, err
 	}
 
-	return response, nil
+	return v, nil
 }
 
 func main() {
@@ -82,10 +80,10 @@ func main() {
 	if err != nil {
 		fmt.Println("badjuju")
 	}
-	fmt.Println(images[0].URL)
+	fmt.Println(images)
 }
 
-type ImageResult []struct {
+type ImageResults []struct {
 	Breeds []struct {
 		Weight struct {
 			Imperial string `json:"imperial"`
